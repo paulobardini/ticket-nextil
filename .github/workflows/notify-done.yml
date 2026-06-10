@@ -1,0 +1,29 @@
+name: Notify on ticket done
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'   # roda a cada 15 minutos
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check done tickets and send emails
+        env:
+          GH_TOKEN:   ${{ secrets.NEXTIL_GITHUB_TOKEN }}
+          RESEND_KEY: ${{ secrets.RESEND_API_KEY }}
+          FROM_EMAIL: ${{ secrets.FROM_EMAIL }}
+        run: python3 notify_done.py
+
+      - name: Commit sent_emails tracking file
+        run: |
+          git config user.email "actions@github.com"
+          git config user.name  "GitHub Actions"
+          git add sent_emails.txt
+          git diff --staged --quiet || (git commit -m "chore: update sent emails log [skip ci]" && git push)

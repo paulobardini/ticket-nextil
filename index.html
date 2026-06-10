@@ -431,6 +431,12 @@
                         <input type="text" id="nome" placeholder="Nome completo" required>
                     </div>
                     <div class="field">
+                        <label for="email">Seu e-mail <span class="req">*</span></label>
+                        <input type="email" id="email" placeholder="seu@email.com" required>
+                    </div>
+                </div>
+                <div class="row" style="margin-top:0;">
+                    <div class="field">
                         <label for="modulo">Módulo / Área do sistema</label>
                         <input type="text" id="modulo" placeholder="Ex: Pedidos, Vitrine, Financeiro…">
                     </div>
@@ -630,6 +636,7 @@
 
         try {
             const nome      = document.getElementById('nome').value.trim();
+            const email     = document.getElementById('email').value.trim();
             const modulo    = document.getElementById('modulo').value.trim();
             const tipo      = document.querySelector('input[name="tipo"]:checked')?.value;
             const prioridade= document.querySelector('input[name="prioridade"]:checked')?.value;
@@ -645,6 +652,7 @@
 
             const lines = [
                 `**👤 Solicitante:** ${nome}`,
+                `**📧 Email:** ${email}`,
                 modulo ? `**📦 Módulo:** ${modulo}` : null,
                 `**🚦 Prioridade:** ${prioridade}`,
                 '',
