@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Abertura de Ticket — Nextil</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --primary: #0f172a;
+            --accent: #6366f1;
+            --accent-hover: #4f46e5;
+            --success: #10b981;
+            --error: #ef4444;
+            --warning: #f59e0b;
+            --border: #e2e8f0;
+            --text: #0f172a;
+            --text-muted: #64748b;
+            --bg: #f1f5f9;
+            --white: #ffffff;
+            --radius: 10px;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+        }
+
+        /* ── Header ── */
+        .topbar {
+            background: var(--primary);
+            padding: 0 32px;
+            height: 56px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .topbar-logo {
+            width: 30px; height: 30px;
+            background: var(--accent);
+            border-radius: 7px;
+            display: flex; align-items: center; justify-content: center;
+            font-weight: 800; font-size: 15px; color: #fff;
+            flex-shrink: 0;
+        }
+
+        .topbar-name {
+            color: #fff;
+            font-size: 15px;
+            font-weight: 600;
+        }
+
+        .topbar-divider {
+            width: 1px; height: 18px;
+            background: rgba(255,255,255,0.15);
+        }
+
+        .topbar-sub {
+            color: rgba(255,255,255,0.45);
+            font-size: 13px;
+        }
+
+        .topbar-badge {
+            margin-left: auto;
+            background: rgba(99,102,241,0.25);
+            color: #a5b4fc;
+            font-size: 11px;
+            font-weight: 600;
+            padding: 3px 10px;
+            border-radius: 20px;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+        }
+
+        .topbar-settings {
+            margin-left: 10px;
+            background: none;
+            border: none;
+            color: rgba(255,255,255,0.45);
+            cursor: pointer;
+            font-size: 16px;
+            padding: 4px;
+            line-height: 1;
+            transition: color 0.15s;
+        }
+        .topbar-settings:hover { color: #fff; }
+
+        /* ── Setup modal ── */
+        .modal-overlay {
+            position: fixed; inset: 0;
+            background: rgba(15,23,42,0.6);
+            backdrop-filter: blur(4px);
+            display: flex; align-items: center; justify-content: center;
+            z-index: 100;
+            padding: 24px;
+        }
+        .modal-overlay.hidden { display: none; }
+
+        .modal {
+            background: var(--white);
+            border-radius: 12px;
+            width: 100%; max-width: 480px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+            overflow: hidden;
+        }
+
+        .modal-header {
+            padding: 24px 28px 20px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .modal-header h2 { font-size: 17px; font-weight: 700; margin-bottom: 4px; }
+        .modal-header p  { font-size: 13px; color: var(--text-muted); line-height: 1.5; }
+
+        .modal-body { padding: 24px 28px; }
+
+        .modal-body label { margin-bottom: 6px; }
+
+        .modal-body input {
+            font-family: 'SF Mono', 'Fira Code', monospace;
+            font-size: 12.5px;
+            letter-spacing: 0.02em;
+        }
+
+        .modal-hint {
+            margin-top: 10px;
+            font-size: 12px;
+            color: var(--text-muted);
+            line-height: 1.5;
+        }
+
+        .modal-hint a { color: var(--accent); text-decoration: none; }
+
+        .modal-footer {
+            padding: 16px 28px 24px;
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+
+        .btn-secondary {
+            background: none;
+            border: 1.5px solid var(--border);
+            color: var(--text-muted);
+            padding: 9px 20px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: border-color 0.15s;
+        }
+        .btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+
+        .token-status {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-top: 8px;
+        }
+        .token-status.ok { color: #065f46; }
+        .token-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+
+        /* ── Layout ── */
+        .page {
+            max-width: 780px;
+            margin: 40px auto 80px;
+            padding: 0 24px;
+        }
+
+        .card {
+            background: var(--white);
+            border-radius: var(--radius);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 8px 32px rgba(0,0,0,0.05);
+            overflow: hidden;
+        }
+
+        .card-header {
+            padding: 32px 40px 28px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: flex-start;
+            gap: 16px;
+        }
+
+        .card-header-icon {
+            width: 44px; height: 44px;
+            background: rgba(99,102,241,0.1);
+            border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 20px;
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+
+        .card-header-text h1 {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--text);
+            margin-bottom: 6px;
+        }
+
+        .card-header-text p {
+            color: var(--text-muted);
+            font-size: 13.5px;
+            line-height: 1.6;
+        }
+
+        .destination-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            background: rgba(16,185,129,0.1);
+            color: #065f46;
+            font-size: 12px;
+            font-weight: 600;
+            padding: 3px 10px;
+            border-radius: 20px;
+            margin-top: 8px;
+        }
+
+        .card-body {
+            padding: 36px 40px;
+        }
+
+        /* ── Sections ── */
+        .section + .section {
+            margin-top: 36px;
+            padding-top: 36px;
+            border-top: 1px solid var(--border);
+        }
+
+        .section-label {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--text-muted);
+            margin-bottom: 20px;
+        }
+
+        /* ── Form elements ── */
+        .row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+
+        .field { margin-bottom: 20px; }
+        .field:last-child { margin-bottom: 0; }
+
+        label {
+            display: block;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text);
+            margin-bottom: 7px;
+        }
+
+        .req { color: var(--error); margin-left: 2px; }
+
+        input[type="text"],
+        textarea,
+        select {
+            width: 100%;
+            padding: 10px 14px;
+            border: 1.5px solid var(--border);
+            border-radius: 8px;
+            font-size: 14px;
+            color: var(--text);
+            background: var(--white);
+            transition: border-color 0.15s, box-shadow 0.15s;
+            font-family: inherit;
+            appearance: none;
+        }
+
+        input[type="text"]:focus,
+        textarea:focus,
+        select:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(99,102,241,0.12);
+        }
+
+        input::placeholder, textarea::placeholder { color: #b0bec5; }
+
+        textarea { resize: vertical; min-height: 96px; }
+
+        /* ── Chip selectors ── */
+        .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+
+        .chip-input { display: none; }
+
+        .chip-label {
+            padding: 7px 16px;
+            border: 1.5px solid var(--border);
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            color: var(--text-muted);
+            transition: all 0.15s;
+            user-select: none;
+        }
+
+        .chip-label:hover { border-color: var(--accent); color: var(--accent); }
+
+        .chip-input:checked + .chip-label {
+            border-color: var(--accent);
+            background: rgba(99,102,241,0.08);
+            color: var(--accent);
+        }
+
+        /* Priority overrides */
+        #p-alta:checked + .chip-label   { border-color: #f59e0b; background: rgba(245,158,11,0.08); color: #b45309; }
+        #p-critica:checked + .chip-label { border-color: var(--error); background: rgba(239,68,68,0.08); color: var(--error); }
+        #p-media:checked + .chip-label  { border-color: #3b82f6; background: rgba(59,130,246,0.08); color: #1d4ed8; }
+        #p-baixa:checked + .chip-label  { border-color: #10b981; background: rgba(16,185,129,0.08); color: #065f46; }
+
+        /* ── Submit ── */
+        .card-footer {
+            padding: 24px 40px;
+            background: #f8fafc;
+            border-top: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+        }
+
+        .footer-note {
+            font-size: 12.5px;
+            color: var(--text-muted);
+            line-height: 1.5;
+        }
+
+        .footer-note strong { color: var(--text); }
+
+        .btn {
+            background: var(--accent);
+            color: #fff;
+            border: none;
+            padding: 11px 28px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.15s, transform 0.1s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+
+        .btn:hover:not(:disabled) { background: var(--accent-hover); transform: translateY(-1px); }
+        .btn:active { transform: translateY(0); }
+        .btn:disabled { opacity: 0.55; cursor: not-allowed; transform: none; }
+
+        /* ── Alerts ── */
+        .alert {
+            margin: 0 40px 24px;
+            padding: 14px 18px;
+            border-radius: 8px;
+            font-size: 13.5px;
+            line-height: 1.5;
+            display: none;
+        }
+
+        .alert-success {
+            background: rgba(16,185,129,0.08);
+            border: 1px solid rgba(16,185,129,0.25);
+            color: #065f46;
+        }
+
+        .alert-error {
+            background: rgba(239,68,68,0.08);
+            border: 1px solid rgba(239,68,68,0.25);
+            color: #991b1b;
+        }
+
+        /* ── Spinner ── */
+        .spinner {
+            width: 15px; height: 15px;
+            border: 2px solid rgba(255,255,255,0.35);
+            border-top-color: #fff;
+            border-radius: 50%;
+            animation: spin 0.65s linear infinite;
+            display: none;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* ── Responsive ── */
+        @media (max-width: 600px) {
+            .page { padding: 0 12px; margin-top: 24px; }
+            .card-header, .card-body, .card-footer { padding-left: 20px; padding-right: 20px; }
+            .alert { margin-left: 20px; margin-right: 20px; }
+            .row { grid-template-columns: 1fr; gap: 0; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="topbar">
+    <div class="topbar-logo">N</div>
+    <span class="topbar-name">Nextil</span>
+    <div class="topbar-divider"></div>
+    <span class="topbar-sub">Central de Tickets</span>
+    <span class="topbar-badge">GitHub Projects</span>
+</div>
+
+<div class="page">
+    <div class="card">
+
+        <div class="card-header">
+            <div class="card-header-icon">🎫</div>
+            <div class="card-header-text">
+                <h1>Abertura de Ticket</h1>
+                <p>Registre melhorias, bugs ou novas funcionalidades. Sua solicitação será criada automaticamente no board do time.</p>
+                <span class="destination-tag">▶ Demanda - Testes</span>
+            </div>
+        </div>
+
+        <form id="ticketForm">
+        <div class="card-body">
+
+            <!-- Identificação -->
+            <div class="section">
+                <div class="section-label">Identificação</div>
+                <div class="row">
+                    <div class="field">
+                        <label for="nome">Seu nome <span class="req">*</span></label>
+                        <input type="text" id="nome" placeholder="Nome completo" required>
+                    </div>
+                    <div class="field">
+                        <label for="modulo">Módulo / Área do sistema</label>
+                        <input type="text" id="modulo" placeholder="Ex: Pedidos, Vitrine, Financeiro…">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Classificação -->
+            <div class="section">
+                <div class="section-label">Classificação</div>
+
+                <div class="field">
+                    <label>Tipo de demanda <span class="req">*</span></label>
+                    <div class="chips">
+                        <input type="radio" name="tipo" id="tipo-bug"     value="Bug"                class="chip-input" required>
+                        <label for="tipo-bug"     class="chip-label">🐛 Bug</label>
+
+                        <input type="radio" name="tipo" id="tipo-melhoria" value="Melhoria"          class="chip-input">
+                        <label for="tipo-melhoria" class="chip-label">✨ Melhoria</label>
+
+                        <input type="radio" name="tipo" id="tipo-feature"  value="Nova funcionalidade" class="chip-input">
+                        <label for="tipo-feature"  class="chip-label">🚀 Nova funcionalidade</label>
+
+                        <input type="radio" name="tipo" id="tipo-duvida"   value="Dúvida"            class="chip-input">
+                        <label for="tipo-duvida"   class="chip-label">❓ Dúvida</label>
+                    </div>
+                </div>
+
+                <div class="field" style="margin-top:16px;">
+                    <label>Prioridade <span class="req">*</span></label>
+                    <div class="chips">
+                        <input type="radio" name="prioridade" id="p-baixa"   value="Baixa"   class="chip-input" required>
+                        <label for="p-baixa"   class="chip-label">🟢 Baixa</label>
+
+                        <input type="radio" name="prioridade" id="p-media"   value="Média"   class="chip-input">
+                        <label for="p-media"   class="chip-label">🔵 Média</label>
+
+                        <input type="radio" name="prioridade" id="p-alta"    value="Alta"    class="chip-input">
+                        <label for="p-alta"    class="chip-label">🟠 Alta</label>
+
+                        <input type="radio" name="prioridade" id="p-critica" value="Crítica" class="chip-input">
+                        <label for="p-critica" class="chip-label">🔴 Crítica</label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Descrição -->
+            <div class="section">
+                <div class="section-label">Descrição</div>
+
+                <div class="field">
+                    <label for="titulo">Título da demanda <span class="req">*</span></label>
+                    <input type="text" id="titulo" placeholder="Descreva o problema ou melhoria em uma frase objetiva" required>
+                </div>
+
+                <div class="field">
+                    <label for="descricao">Descrição detalhada <span class="req">*</span></label>
+                    <textarea id="descricao" rows="4" placeholder="Descreva com detalhes o que acontece ou o que precisa ser feito…" required></textarea>
+                </div>
+
+                <div class="row">
+                    <div class="field">
+                        <label for="esperado">Comportamento esperado</label>
+                        <textarea id="esperado" rows="3" placeholder="O que deveria acontecer?"></textarea>
+                    </div>
+                    <div class="field">
+                        <label for="atual">Comportamento atual</label>
+                        <textarea id="atual" rows="3" placeholder="O que está acontecendo?"></textarea>
+                    </div>
+                </div>
+            </div>
+
+        </div><!-- /card-body -->
+
+        <div class="alert alert-success" id="alertSuccess">
+            ✅ <strong>Ticket criado com sucesso!</strong> Ele já aparece no board em <em>Demanda - Testes</em>.
+        </div>
+        <div class="alert alert-error" id="alertError"></div>
+
+        <div class="card-footer">
+            <div class="footer-note">
+                Ticket será criado em <strong>appnextil / Nextil</strong><br>
+                coluna <strong>Demanda - Testes</strong>
+            </div>
+            <button type="submit" class="btn" id="submitBtn">
+                <div class="spinner" id="spinner"></div>
+                <span id="submitText">Abrir ticket</span>
+            </button>
+        </div>
+
+        </form>
+    </div>
+</div>
+
+<script>
+    // ─────────────────────────────────────────────
+    //  CONFIGURAÇÃO — substitua o token abaixo
+    // ─────────────────────────────────────────────
+    const CONFIG = {
+        token:         '__GITHUB_TOKEN__',
+        org:           'appnextil',
+        projectNumber: 1,
+        targetStatus:  'Demanda - Testes'
+    };
+    // ─────────────────────────────────────────────
+
+    let _projectCache = null;
+
+    async function gql(query) {
+        const res = await fetch('https://api.github.com/graphql', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${CONFIG.token}`,
+                'Content-Type':  'application/json'
+            },
+            body: JSON.stringify({ query })
+        });
+        const json = await res.json();
+        if (json.errors?.length) throw new Error(json.errors[0].message);
+        return json.data;
+    }
+
+    async function getProjectInfo() {
+        if (_projectCache) return _projectCache;
+
+        const data = await gql(`
+            query {
+                organization(login: "${CONFIG.org}") {
+                    projectV2(number: ${CONFIG.projectNumber}) {
+                        id
+                        fields(first: 25) {
+                            nodes {
+                                ... on ProjectV2SingleSelectField {
+                                    id name
+                                    options { id name }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        `);
+
+        const project     = data.organization.projectV2;
+        const statusField = project.fields.nodes.find(f => f.name === 'Status');
+        const option      = statusField.options.find(o => o.name === CONFIG.targetStatus);
+
+        _projectCache = {
+            projectId: project.id,
+            fieldId:   statusField.id,
+            optionId:  option.id
+        };
+        return _projectCache;
+    }
+
+    async function createTicket(title, body) {
+        const info = await getProjectInfo();
+
+        const created = await gql(`
+            mutation {
+                addProjectV2DraftIssue(input: {
+                    projectId: "${info.projectId}"
+                    title:     ${JSON.stringify(title)}
+                    body:      ${JSON.stringify(body)}
+                }) { projectItem { id } }
+            }
+        `);
+
+        const itemId = created.addProjectV2DraftIssue.projectItem.id;
+
+        await gql(`
+            mutation {
+                updateProjectV2ItemFieldValue(input: {
+                    projectId: "${info.projectId}"
+                    itemId:    "${itemId}"
+                    fieldId:   "${info.fieldId}"
+                    value:     { singleSelectOptionId: "${info.optionId}" }
+                }) { projectV2Item { id } }
+            }
+        `);
+    }
+
+    // ── Form submit ──
+    document.getElementById('ticketForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const btn        = document.getElementById('submitBtn');
+        const spinner    = document.getElementById('spinner');
+        const submitText = document.getElementById('submitText');
+        const alertOk    = document.getElementById('alertSuccess');
+        const alertErr   = document.getElementById('alertError');
+
+        alertOk.style.display  = 'none';
+        alertErr.style.display = 'none';
+        btn.disabled            = true;
+        spinner.style.display   = 'block';
+        submitText.textContent  = 'Enviando…';
+
+        try {
+            const nome      = document.getElementById('nome').value.trim();
+            const modulo    = document.getElementById('modulo').value.trim();
+            const tipo      = document.querySelector('input[name="tipo"]:checked')?.value;
+            const prioridade= document.querySelector('input[name="prioridade"]:checked')?.value;
+            const titulo    = document.getElementById('titulo').value.trim();
+            const descricao = document.getElementById('descricao').value.trim();
+            const esperado  = document.getElementById('esperado').value.trim();
+            const atual     = document.getElementById('atual').value.trim();
+
+            if (!tipo)      throw new Error('Selecione o tipo de demanda.');
+            if (!prioridade)throw new Error('Selecione a prioridade.');
+
+            const ticketTitle = `[${tipo}] ${titulo}`;
+
+            const lines = [
+                `**👤 Solicitante:** ${nome}`,
+                modulo ? `**📦 Módulo:** ${modulo}` : null,
+                `**🚦 Prioridade:** ${prioridade}`,
+                '',
+                '### 📋 Descrição',
+                descricao,
+            ];
+            if (esperado) lines.push('', '### ✅ Comportamento esperado', esperado);
+            if (atual)    lines.push('', '### ❌ Comportamento atual', atual);
+
+            const body = lines.filter(l => l !== null).join('\n');
+
+            await createTicket(ticketTitle, body);
+
+            alertOk.style.display = 'block';
+            e.target.reset();
+            window.scrollTo({ top: alertOk.offsetTop - 80, behavior: 'smooth' });
+
+        } catch (err) {
+            alertErr.textContent   = `❌ Erro ao criar ticket: ${err.message}`;
+            alertErr.style.display = 'block';
+        } finally {
+            btn.disabled           = false;
+            spinner.style.display  = 'none';
+            submitText.textContent = 'Abrir ticket';
+        }
+    });
+</script>
+</body>
+</html>
