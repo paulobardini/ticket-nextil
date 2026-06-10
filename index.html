@@ -31,7 +31,8 @@
 
         /* ── Header ── */
         .topbar {
-            background: var(--primary);
+            background: var(--white);
+            border-bottom: 1px solid var(--border);
             padding: 0 32px;
             height: 56px;
             display: flex;
@@ -46,25 +47,25 @@
         }
 
         .topbar-name {
-            color: #fff;
+            color: var(--text);
             font-size: 15px;
             font-weight: 600;
         }
 
         .topbar-divider {
             width: 1px; height: 18px;
-            background: rgba(255,255,255,0.15);
+            background: var(--border);
         }
 
         .topbar-sub {
-            color: rgba(255,255,255,0.45);
+            color: var(--text-muted);
             font-size: 13px;
         }
 
         .topbar-badge {
             margin-left: auto;
-            background: rgba(99,102,241,0.25);
-            color: #a5b4fc;
+            background: rgba(99,102,241,0.1);
+            color: var(--accent);
             font-size: 11px;
             font-weight: 600;
             padding: 3px 10px;
