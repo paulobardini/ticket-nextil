@@ -404,18 +404,19 @@
             display: inline-flex;
             align-items: center;
             gap: 6px;
-            background: none;
-            border: 1.5px solid var(--border);
-            color: var(--text-muted);
+            background: var(--accent);
+            border: none;
+            color: #fff;
             font-size: 13px;
-            font-weight: 500;
-            padding: 7px 16px;
+            font-weight: 600;
+            padding: 8px 18px;
             border-radius: 8px;
             cursor: pointer;
-            transition: all 0.15s;
+            transition: background 0.15s, transform 0.1s;
             margin-top: 12px;
         }
-        .btn-lookup:hover { border-color: var(--accent); color: var(--accent); }
+        .btn-lookup:hover { background: var(--accent-hover); transform: translateY(-1px); }
+        .btn-lookup:active { transform: translateY(0); }
 
         /* ── Lookup modal ── */
         .lk-overlay {
