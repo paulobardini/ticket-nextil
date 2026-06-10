@@ -592,12 +592,12 @@
             <div class="lk-modal">
                 <div class="lk-header">
                     <h2>📋 Andamento dos meus tickets</h2>
-                    <button class="lk-close" onclick="closeLookup()">✕</button>
+                    <button type="button" class="lk-close" onclick="closeLookup()">✕</button>
                 </div>
                 <div class="lk-search">
                     <input type="email" id="lkEmail" placeholder="Digite o e-mail que usou para abrir o ticket"
                            onkeydown="if(event.key==='Enter') searchTickets()">
-                    <button class="btn" onclick="searchTickets()">Buscar</button>
+                    <button type="button" class="btn" onclick="searchTickets()">Buscar</button>
                 </div>
                 <div class="lk-body" id="lkBody">
                     <div class="lk-empty">Digite seu e-mail e clique em Buscar.</div>
@@ -904,12 +904,14 @@
             if (!tipo)      throw new Error('Selecione o tipo de demanda.');
             if (!prioridade)throw new Error('Selecione a prioridade.');
 
-            // Upload image if selected
+            // Upload image if selected (non-blocking — ticket is created even if upload fails)
             const imgFile = document.getElementById('imgInput').files[0];
             let imageUrl = null;
             if (imgFile) {
                 document.getElementById('imgUploading').style.display = 'block';
-                imageUrl = await uploadImageToImgbb(imgFile);
+                try {
+                    imageUrl = await uploadImageToImgbb(imgFile);
+                } catch(_) {}
                 document.getElementById('imgUploading').style.display = 'none';
             }
 
