@@ -399,53 +399,6 @@
             .row { grid-template-columns: 1fr; gap: 0; }
         }
 
-        /* ── Image upload ── */
-        .upload-area {
-            border: 2px dashed var(--border);
-            border-radius: 8px;
-            padding: 24px;
-            text-align: center;
-            cursor: pointer;
-            transition: border-color 0.15s, background 0.15s;
-            position: relative;
-        }
-        .upload-area:hover, .upload-area.dragover {
-            border-color: var(--accent);
-            background: rgba(99,102,241,0.04);
-        }
-        .upload-area input[type="file"] {
-            position: absolute; inset: 0;
-            opacity: 0; cursor: pointer; width: 100%; height: 100%;
-        }
-        .upload-icon { font-size: 28px; margin-bottom: 8px; }
-        .upload-text { font-size: 13px; color: var(--text-muted); }
-        .upload-text strong { color: var(--accent); }
-
-        .img-preview {
-            display: none;
-            margin-top: 12px;
-            position: relative;
-            border-radius: 8px;
-            overflow: hidden;
-            border: 1px solid var(--border);
-        }
-        .img-preview img {
-            width: 100%; max-height: 220px;
-            object-fit: cover; display: block;
-        }
-        .img-preview-remove {
-            position: absolute; top: 8px; right: 8px;
-            background: rgba(0,0,0,0.55); color: #fff;
-            border: none; border-radius: 50%;
-            width: 26px; height: 26px;
-            font-size: 13px; cursor: pointer;
-            display: flex; align-items: center; justify-content: center;
-        }
-        .img-uploading {
-            font-size: 12px; color: var(--text-muted);
-            margin-top: 6px; display: none;
-        }
-
         /* ── Lookup button ── */
         .btn-lookup {
             display: inline-flex;
@@ -692,24 +645,6 @@
                 </div>
             </div>
 
-            <!-- Imagem -->
-            <div class="section">
-                <div class="section-label">Anexo</div>
-                <div class="field">
-                    <label>Imagem / Print de tela</label>
-                    <div class="upload-area" id="uploadArea">
-                        <input type="file" id="imgInput" accept="image/*" onchange="onImageSelect(event)">
-                        <div class="upload-icon">🖼️</div>
-                        <div class="upload-text"><strong>Clique para selecionar</strong> ou arraste uma imagem</div>
-                    </div>
-                    <div class="img-preview" id="imgPreview">
-                        <img id="imgThumb" src="" alt="Preview">
-                        <button type="button" class="img-preview-remove" onclick="removeImage()">✕</button>
-                    </div>
-                    <div class="img-uploading" id="imgUploading">⏳ Enviando imagem…</div>
-                </div>
-            </div>
-
         </div><!-- /card-body -->
 
         <div class="alert alert-success" id="alertSuccess">
@@ -738,65 +673,12 @@
     // ─────────────────────────────────────────────
     const CONFIG = {
         token:         '__GITHUB_TOKEN__',
-        imgbbKey:      '__IMGBB_KEY__',
         org:           'appnextil',
         projectNumber: 1,
         targetStatus:  'Demanda - Testes'
     };
     // ─────────────────────────────────────────────
 
-    // ── Image upload ─────────────────────────────
-    let _uploadedImageUrl = null;
-
-    function onImageSelect(e) {
-        const file = e.target.files[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = ev => {
-            document.getElementById('imgThumb').src = ev.target.result;
-            document.getElementById('imgPreview').style.display = 'block';
-        };
-        reader.readAsDataURL(file);
-        _uploadedImageUrl = null;
-    }
-
-    function removeImage() {
-        document.getElementById('imgInput').value = '';
-        document.getElementById('imgPreview').style.display = 'none';
-        document.getElementById('imgThumb').src = '';
-        _uploadedImageUrl = null;
-    }
-
-    // Drag & drop
-    const uploadArea = document.getElementById('uploadArea');
-    uploadArea.addEventListener('dragover',  e => { e.preventDefault(); uploadArea.classList.add('dragover'); });
-    uploadArea.addEventListener('dragleave', () => uploadArea.classList.remove('dragover'));
-    uploadArea.addEventListener('drop', e => {
-        e.preventDefault();
-        uploadArea.classList.remove('dragover');
-        const file = e.dataTransfer.files[0];
-        if (file && file.type.startsWith('image/')) {
-            const dt = new DataTransfer();
-            dt.items.add(file);
-            document.getElementById('imgInput').files = dt.files;
-            onImageSelect({ target: { files: dt.files } });
-        }
-    });
-
-    async function uploadImageToImgbb(file) {
-        if (!CONFIG.imgbbKey || CONFIG.imgbbKey === '__IMGBB_KEY__') return null;
-        const b64 = await new Promise(res => {
-            const r = new FileReader();
-            r.onload = e => res(e.target.result.split(',')[1]);
-            r.readAsDataURL(file);
-        });
-        const form = new FormData();
-        form.append('key', CONFIG.imgbbKey);
-        form.append('image', b64);
-        const resp = await fetch('https://api.imgbb.com/1/upload', { method: 'POST', body: form });
-        const json = await resp.json();
-        return json.success ? json.data.url : null;
-    }
 
     let _projectCache = null;
 
@@ -904,16 +786,6 @@
             if (!tipo)      throw new Error('Selecione o tipo de demanda.');
             if (!prioridade)throw new Error('Selecione a prioridade.');
 
-            // Upload image if selected (non-blocking — ticket is created even if upload fails)
-            const imgFile = document.getElementById('imgInput').files[0];
-            let imageUrl = null;
-            if (imgFile) {
-                document.getElementById('imgUploading').style.display = 'block';
-                try {
-                    imageUrl = await uploadImageToImgbb(imgFile);
-                } catch(_) {}
-                document.getElementById('imgUploading').style.display = 'none';
-            }
 
             const ticketTitle = `[${tipo}] ${titulo}`;
 
@@ -928,7 +800,6 @@
             ];
             if (esperado)  lines.push('', '### ✅ Comportamento esperado', esperado);
             if (atual)     lines.push('', '### ❌ Comportamento atual', atual);
-            if (imageUrl)  lines.push('', '### 🖼️ Imagem anexada', `![screenshot](${imageUrl})`);
 
             const body = lines.filter(l => l !== null).join('\n');
 
