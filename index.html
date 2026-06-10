@@ -398,6 +398,123 @@
             .alert { margin-left: 20px; margin-right: 20px; }
             .row { grid-template-columns: 1fr; gap: 0; }
         }
+
+        /* ── Lookup button ── */
+        .btn-lookup {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: none;
+            border: 1.5px solid var(--border);
+            color: var(--text-muted);
+            font-size: 13px;
+            font-weight: 500;
+            padding: 7px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.15s;
+            margin-top: 12px;
+        }
+        .btn-lookup:hover { border-color: var(--accent); color: var(--accent); }
+
+        /* ── Lookup modal ── */
+        .lk-overlay {
+            position: fixed; inset: 0;
+            background: rgba(15,23,42,0.55);
+            backdrop-filter: blur(4px);
+            display: flex; align-items: flex-start; justify-content: center;
+            z-index: 200;
+            padding: 40px 16px 40px;
+            overflow-y: auto;
+        }
+        .lk-overlay.hidden { display: none; }
+
+        .lk-modal {
+            background: var(--white);
+            border-radius: 12px;
+            width: 100%; max-width: 680px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.18);
+        }
+
+        .lk-header {
+            padding: 24px 28px 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        .lk-header h2 { font-size: 17px; font-weight: 700; margin: 0; }
+        .lk-close {
+            background: none; border: none; font-size: 20px;
+            color: var(--text-muted); cursor: pointer; padding: 4px; line-height: 1;
+        }
+        .lk-close:hover { color: var(--text); }
+
+        .lk-search {
+            padding: 20px 28px;
+            border-bottom: 1px solid var(--border);
+            display: flex; gap: 10px;
+        }
+        .lk-search input {
+            flex: 1;
+            padding: 10px 14px;
+            border: 1.5px solid var(--border);
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: inherit;
+        }
+        .lk-search input:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(99,102,241,0.12);
+        }
+        .lk-search .btn { padding: 10px 20px; font-size: 13px; }
+
+        .lk-body { padding: 20px 28px; min-height: 120px; }
+
+        .lk-empty {
+            text-align: center;
+            padding: 40px 0;
+            color: var(--text-muted);
+            font-size: 14px;
+        }
+
+        /* ── Ticket card ── */
+        .tk-card {
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 16px 20px;
+            margin-bottom: 12px;
+            transition: box-shadow 0.15s;
+        }
+        .tk-card:last-child { margin-bottom: 0; }
+        .tk-card:hover { box-shadow: 0 2px 12px rgba(0,0,0,0.07); }
+
+        .tk-top {
+            display: flex; align-items: flex-start;
+            justify-content: space-between; gap: 12px;
+            margin-bottom: 10px;
+        }
+        .tk-title {
+            font-size: 14px; font-weight: 600;
+            color: var(--text); line-height: 1.4;
+        }
+        .tk-badge {
+            display: inline-flex; align-items: center; gap: 5px;
+            font-size: 11px; font-weight: 700;
+            padding: 3px 10px; border-radius: 20px;
+            white-space: nowrap; flex-shrink: 0;
+        }
+        .tk-dot { width: 6px; height: 6px; border-radius: 50%; }
+
+        .tk-meta {
+            display: flex; flex-wrap: wrap; gap: 12px;
+            font-size: 12px; color: var(--text-muted);
+        }
+        .tk-meta span { display: flex; align-items: center; gap: 4px; }
+
+        .lk-spinner {
+            text-align: center; padding: 40px 0;
+            color: var(--text-muted); font-size: 14px;
+        }
     </style>
 </head>
 <body>
@@ -418,6 +535,27 @@
                 <h1>Abertura de Ticket</h1>
                 <p>Registre melhorias, bugs ou novas funcionalidades. Sua solicitação será criada automaticamente no board do time.</p>
                 <span class="destination-tag">▶ Demanda - Testes</span>
+                <button type="button" class="btn-lookup" onclick="openLookup()">
+                    🔍 Consultar andamento dos meus tickets
+                </button>
+            </div>
+        </div>
+
+        <!-- Modal de consulta -->
+        <div class="lk-overlay hidden" id="lkOverlay" onclick="closeLookupOutside(event)">
+            <div class="lk-modal">
+                <div class="lk-header">
+                    <h2>📋 Andamento dos meus tickets</h2>
+                    <button class="lk-close" onclick="closeLookup()">✕</button>
+                </div>
+                <div class="lk-search">
+                    <input type="email" id="lkEmail" placeholder="Digite o e-mail que usou para abrir o ticket"
+                           onkeydown="if(event.key==='Enter') searchTickets()">
+                    <button class="btn" onclick="searchTickets()">Buscar</button>
+                </div>
+                <div class="lk-body" id="lkBody">
+                    <div class="lk-empty">Digite seu e-mail e clique em Buscar.</div>
+                </div>
             </div>
         </div>
 
@@ -679,6 +817,147 @@
             submitText.textContent = 'Abrir ticket';
         }
     });
+
+    // ── Lookup ──────────────────────────────────────────────────────────────
+
+    const STATUS_MAP = {
+        'Demanda - Testes': { label: 'Em análise',        color: '#475569', bg: '#f1f5f9', dot: '#94a3b8' },
+        'Backlog':          { label: 'Em análise',        color: '#475569', bg: '#f1f5f9', dot: '#94a3b8' },
+        'Refinement':       { label: 'Em análise',        color: '#475569', bg: '#f1f5f9', dot: '#94a3b8' },
+        'Next':             { label: 'Em correção',       color: '#92400e', bg: '#fef3c7', dot: '#f59e0b' },
+        'Doing':            { label: 'Em correção',       color: '#92400e', bg: '#fef3c7', dot: '#f59e0b' },
+        'Doing - PR':       { label: 'Em correção',       color: '#92400e', bg: '#fef3c7', dot: '#f59e0b' },
+        'Doing PR':         { label: 'Em correção',       color: '#92400e', bg: '#fef3c7', dot: '#f59e0b' },
+        'Done PR':          { label: 'Em testes',         color: '#5b21b6', bg: '#ede9fe', dot: '#8b5cf6' },
+        'QA':               { label: 'Aguardando subida', color: '#075985', bg: '#e0f2fe', dot: '#0ea5e9' },
+        'Done':             { label: 'Feito ✅',          color: '#065f46', bg: '#d1fae5', dot: '#10b981' },
+    };
+
+    function openLookup() {
+        document.getElementById('lkOverlay').classList.remove('hidden');
+        setTimeout(() => document.getElementById('lkEmail').focus(), 100);
+    }
+
+    function closeLookup() {
+        document.getElementById('lkOverlay').classList.add('hidden');
+    }
+
+    function closeLookupOutside(e) {
+        if (e.target === document.getElementById('lkOverlay')) closeLookup();
+    }
+
+    function timeAgo(dateStr) {
+        const diff = Date.now() - new Date(dateStr).getTime();
+        const mins  = Math.floor(diff / 60000);
+        const hours = Math.floor(diff / 3600000);
+        const days  = Math.floor(diff / 86400000);
+        if (mins  < 60)  return `${mins} min`;
+        if (hours < 24)  return `${hours}h`;
+        if (days  === 1) return '1 dia';
+        if (days  < 7)   return `${days} dias`;
+        const weeks = Math.floor(days / 7);
+        if (weeks === 1) return '1 semana';
+        if (weeks < 5)   return `${weeks} semanas`;
+        const months = Math.floor(days / 30);
+        if (months === 1) return '1 mês';
+        return `${months} meses`;
+    }
+
+    function parseField(body, label) {
+        const m = body.match(new RegExp('\\*\\*' + label.replace(/[.*+?^${}()|[\]\\]/g,'\\$&') + '\\*\\*\\s*([^\\n\\r]+)'));
+        return m ? m[1].trim() : null;
+    }
+
+    async function searchTickets() {
+        const email = document.getElementById('lkEmail').value.trim().toLowerCase();
+        const body  = document.getElementById('lkBody');
+
+        if (!email) { body.innerHTML = '<div class="lk-empty">Digite seu e-mail.</div>'; return; }
+
+        body.innerHTML = '<div class="lk-spinner">🔄 Buscando seus tickets…</div>';
+
+        try {
+            const data = await gql(`
+                query {
+                    organization(login: "${CONFIG.org}") {
+                        projectV2(number: ${CONFIG.projectNumber}) {
+                            items(first: 100) {
+                                nodes {
+                                    id
+                                    createdAt
+                                    content {
+                                        ... on DraftIssue { title body }
+                                    }
+                                    fieldValues(first: 15) {
+                                        nodes {
+                                            ... on ProjectV2ItemFieldSingleSelectValue {
+                                                name
+                                                field { ... on ProjectV2SingleSelectField { name } }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            `);
+
+            const items = data.organization.projectV2.items.nodes;
+            const mine  = items.filter(item => {
+                const b = item.content?.body || '';
+                const e = parseField(b, '📧 Email:') || '';
+                return e.toLowerCase() === email;
+            });
+
+            if (mine.length === 0) {
+                body.innerHTML = '<div class="lk-empty">Nenhum ticket encontrado para esse e-mail.</div>';
+                return;
+            }
+
+            const cards = mine.map(item => {
+                const content   = item.content || {};
+                const title     = content.title || 'Sem título';
+                const itemBody  = content.body  || '';
+                const prioridade= parseField(itemBody, '🚦 Prioridade:') || '—';
+                const modulo    = parseField(itemBody, '📦 Módulo:');
+                const created   = item.createdAt;
+
+                let status = '—';
+                for (const fv of item.fieldValues.nodes) {
+                    if (fv.field?.name === 'Status' && fv.name) { status = fv.name; break; }
+                }
+
+                const map    = STATUS_MAP[status] || { label: status, color: '#475569', bg: '#f1f5f9', dot: '#94a3b8' };
+                const badge  = `<span class="tk-badge" style="background:${map.bg};color:${map.color}">
+                                    <span class="tk-dot" style="background:${map.dot}"></span>${map.label}
+                                </span>`;
+                const tempo  = created ? `⏱ Aberto há ${timeAgo(created)}` : '';
+                const pri    = `🚦 ${prioridade}`;
+                const mod    = modulo ? `📦 ${modulo}` : '';
+
+                return `
+                <div class="tk-card">
+                    <div class="tk-top">
+                        <div class="tk-title">${title}</div>
+                        ${badge}
+                    </div>
+                    <div class="tk-meta">
+                        ${tempo ? `<span>${tempo}</span>` : ''}
+                        <span>${pri}</span>
+                        ${mod ? `<span>${mod}</span>` : ''}
+                    </div>
+                </div>`;
+            }).join('');
+
+            body.innerHTML = `<p style="font-size:13px;color:var(--text-muted);margin:0 0 16px;">
+                ${mine.length} ticket${mine.length > 1 ? 's' : ''} encontrado${mine.length > 1 ? 's' : ''}</p>
+                ${cards}`;
+
+        } catch(err) {
+            body.innerHTML = `<div class="lk-empty">Erro ao buscar tickets: ${err.message}</div>`;
+        }
+    }
 </script>
 </body>
 </html>
