@@ -259,6 +259,7 @@
         .req { color: var(--error); margin-left: 2px; }
 
         input[type="text"],
+        input[type="email"],
         textarea,
         select {
             width: 100%;
@@ -274,6 +275,7 @@
         }
 
         input[type="text"]:focus,
+        input[type="email"]:focus,
         textarea:focus,
         select:focus {
             outline: none;
@@ -281,7 +283,7 @@
             box-shadow: 0 0 0 3px rgba(99,102,241,0.12);
         }
 
-        input::placeholder, textarea::placeholder { color: #b0bec5; }
+        input::placeholder, textarea::placeholder, input[type="email"]::placeholder { color: #b0bec5; }
 
         textarea { resize: vertical; min-height: 96px; }
 
