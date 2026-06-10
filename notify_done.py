@@ -1,12 +1,15 @@
 import os
 import json
 import re
+import smtplib
 import urllib.request
 import urllib.error
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 
 GH_TOKEN    = os.environ['GH_TOKEN']
-RESEND_KEY  = os.environ['RESEND_KEY']
-FROM_EMAIL  = os.environ.get('FROM_EMAIL', 'Nextil Tickets <onboarding@resend.dev>')
+GMAIL_USER  = os.environ['GMAIL_USER']
+GMAIL_PASS  = os.environ['GMAIL_PASS']
 SENT_FILE   = 'sent_emails.txt'
 ORG         = 'appnextil'
 PROJECT_NUM = 1
@@ -113,28 +116,21 @@ def send_email(to_email, name, title):
     </div>
     """
 
-    payload = json.dumps({
-        'from':    FROM_EMAIL,
-        'to':      [to_email],
-        'subject': f'✅ Ticket resolvido: {title}',
-        'html':    html,
-    }).encode()
+    msg = MIMEMultipart('alternative')
+    msg['Subject'] = f'✅ Ticket resolvido: {title}'
+    msg['From']    = f'Nextil Tickets <{GMAIL_USER}>'
+    msg['To']      = to_email
+    msg.attach(MIMEText(html, 'html'))
 
-    req = urllib.request.Request(
-        'https://api.resend.com/emails',
-        data=payload,
-        headers={
-            'Authorization': f'Bearer {RESEND_KEY}',
-            'Content-Type':  'application/json',
-        }
-    )
     try:
-        with urllib.request.urlopen(req) as r:
-            resp = json.loads(r.read())
-            print(f'  ✓ Email enviado para {to_email} — id: {resp.get("id")}')
-            return True
-    except urllib.error.HTTPError as e:
-        print(f'  ✗ Erro ao enviar para {to_email}: {e.read().decode()}')
+        with smtplib.SMTP('smtp.gmail.com', 587) as server:
+            server.starttls()
+            server.login(GMAIL_USER, GMAIL_PASS)
+            server.sendmail(GMAIL_USER, to_email, msg.as_string())
+        print(f'  ✓ Email enviado para {to_email}')
+        return True
+    except Exception as e:
+        print(f'  ✗ Erro ao enviar para {to_email}: {e}')
         return False
 
 
