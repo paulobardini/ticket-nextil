@@ -28,6 +28,7 @@ jobs:
       - name: Inject token into HTML
         run: |
           sed -i "s|'__GITHUB_TOKEN__'|'${{ secrets.NEXTIL_GITHUB_TOKEN }}'|g" index.html
+          sed -i "s|'__IMGBB_KEY__'|'${{ secrets.IMGBB_API_KEY }}'|g" index.html
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
