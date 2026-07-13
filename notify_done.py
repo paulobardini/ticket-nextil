@@ -2,18 +2,25 @@ import os
 import json
 import re
 import smtplib
+import sys
 import urllib.request
 import urllib.error
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
-GH_TOKEN    = os.environ['GH_TOKEN']
-GMAIL_USER  = os.environ['GMAIL_USER']
-GMAIL_PASS  = os.environ['GMAIL_PASS']
+GH_TOKEN    = os.environ.get('GH_TOKEN', '').strip()
+GMAIL_USER  = os.environ.get('GMAIL_USER', '').strip()
+GMAIL_PASS  = os.environ.get('GMAIL_PASS', '').strip()
 SENT_FILE   = 'sent_emails.txt'
 ORG         = 'appnextil'
 PROJECT_NUM = 1
 STATUS_DONE = 'Done'
+
+
+def require_env(name, value):
+    if not value:
+        print(f'Erro: variável {name} não configurada ou vazia.', file=sys.stderr)
+        sys.exit(1)
 
 
 def gql(query):
@@ -24,10 +31,48 @@ def gql(query):
         headers={
             'Authorization': f'Bearer {GH_TOKEN}',
             'Content-Type': 'application/json',
-        }
+        },
     )
-    with urllib.request.urlopen(req) as r:
-        return json.loads(r.read())
+
+    try:
+        with urllib.request.urlopen(req) as r:
+            result = json.loads(r.read())
+    except urllib.error.HTTPError as e:
+        if e.code == 401:
+            print(
+                'Erro de autenticação (401): NEXTIL_GITHUB_TOKEN inválido, '
+                'expirado ou revogado.\n'
+                'Ação: gere um novo PAT com escopos read:org e project, '
+                'autorize SSO na org appnextil e atualize o secret do repositório.',
+                file=sys.stderr,
+            )
+        elif e.code == 403:
+            print(
+                'Erro de permissão (403): o token não tem acesso à org '
+                f'{ORG} ou ao Project V2 #{PROJECT_NUM}.\n'
+                'Ação: verifique escopos do PAT e autorização SSO.',
+                file=sys.stderr,
+            )
+        else:
+            print(f'Erro HTTP {e.code} na API GraphQL do GitHub.', file=sys.stderr)
+        sys.exit(1)
+
+    if result.get('errors'):
+        msg = result['errors'][0].get('message', 'erro desconhecido')
+        print(f'Erro GraphQL: {msg}', file=sys.stderr)
+        sys.exit(1)
+
+    if not result.get('data'):
+        print('Resposta GraphQL sem dados.', file=sys.stderr)
+        sys.exit(1)
+
+    return result
+
+
+def validate_token():
+    result = gql('{ viewer { login } }')
+    login = result['data']['viewer']['login']
+    print(f'Autenticado no GitHub como: {login}')
 
 
 def get_done_items():
@@ -56,7 +101,17 @@ def get_done_items():
         }}
     """)
 
-    nodes = result['data']['organization']['projectV2']['items']['nodes']
+    org = result['data'].get('organization')
+    if not org:
+        print(f'Erro: org "{ORG}" não encontrada ou token sem acesso.', file=sys.stderr)
+        sys.exit(1)
+
+    project = org.get('projectV2')
+    if not project:
+        print(f'Erro: Project V2 #{PROJECT_NUM} não encontrado na org {ORG}.', file=sys.stderr)
+        sys.exit(1)
+
+    nodes = project['items']['nodes']
     done = []
     for item in nodes:
         if not item.get('content'):
@@ -135,6 +190,12 @@ def send_email(to_email, name, title):
 
 
 def main():
+    require_env('GH_TOKEN (secret NEXTIL_GITHUB_TOKEN)', GH_TOKEN)
+    require_env('GMAIL_USER', GMAIL_USER)
+    require_env('GMAIL_PASS', GMAIL_PASS)
+
+    validate_token()
+
     sent_ids = set()
     if os.path.exists(SENT_FILE):
         with open(SENT_FILE) as f:
@@ -160,17 +221,20 @@ def main():
 
         print(f'\nProcessando: {title}')
         if not email:
-            print('  ⚠ E-mail não encontrado no corpo — pulando notificação.')
+            print('  ⚠ E-mail não encontrado no corpo — marcando como processado.')
+            new_ids.append(item_id)
+        elif send_email(email, name, title):
+            new_ids.append(item_id)
         else:
-            send_email(email, name, title)
-
-        new_ids.append(item_id)
+            print('  ⚠ Falha no envio — item permanece na fila para a próxima execução.')
 
     if new_ids:
         with open(SENT_FILE, 'a') as f:
             for i in new_ids:
                 f.write(i + '\n')
         print(f'\nRegistrados {len(new_ids)} novos IDs em {SENT_FILE}')
+    else:
+        print('\nNenhum ticket novo para notificar.')
 
 
 if __name__ == '__main__':
